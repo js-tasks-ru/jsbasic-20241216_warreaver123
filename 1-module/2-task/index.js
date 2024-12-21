@@ -10,7 +10,13 @@ function print(text) {
  * чтобы функция sayHello работала корректно
  */
 function isValid(name) {
-  // ваш код...
+
+  if (name === null || name === undefined) {
+    return false;
+  }
+
+  const trimmedName = name.trim();
+  return trimmedName && trimmedName.length >= 4 && !trimmedName.includes(' ');
 }
 
 function sayHello() {
