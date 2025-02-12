@@ -5,7 +5,6 @@ export default class RibbonMenu {
     this.categories = categories;
     this.elem = this.createRibbonMenu();
     this.initialListeners();
-    // setTimeout(() => this.updateCarousel(), 0);
   }
 
   createRibbonMenu() {
