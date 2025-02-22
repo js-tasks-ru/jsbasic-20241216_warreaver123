@@ -3,110 +3,114 @@ import createElement from '../../assets/lib/create-element.js';
 export default class RibbonMenu {
   constructor(categories) {
     this.categories = categories;
-
-    this.render();
-    this.addEventListeners();
-    this.value = '';
+    this.elem = this.createRibbonMenu();
+    this.initialListeners();
   }
 
-  render() {
-    this.elem = createElement(`
+  createRibbonMenu() {
+    this.ribbon = createElement(`
       <div class="ribbon">
+        <!--Кнопка прокрутки влево-->
         <button class="ribbon__arrow ribbon__arrow_left">
-          <img src="/assets/images/icons/angle-icon.svg" alt="icon" />
+          <img src="/assets/images/icons/angle-icon.svg" alt="icon">
         </button>
-        <nav class="ribbon__inner"></nav>
+
+        <!--Ссылки на категории-->
+        <nav class="ribbon__inner">
+          ${this.categories.map(ribbon => this.viewLinks(ribbon)).join('')}
+        </nav>
+
+        <!--Кнопка прокрутки вправо-->
         <button class="ribbon__arrow ribbon__arrow_right ribbon__arrow_visible">
-          <img src="/assets/images/icons/angle-icon.svg" alt="icon" />
+          <img src="/assets/images/icons/angle-icon.svg" alt="icon">
         </button>
       </div>
     `);
 
-    for (let category of this.categories) {
-      let categoryElem = createElement(`<a href="#" class="ribbon__item"></a>`);
-      categoryElem.textContent = category.name; // insert as text, not as HTML!
-      categoryElem.dataset.id = category.id;
-      this.elem.querySelector('.ribbon__inner').append(categoryElem);
-    }
+    this.ribbonInner = this.ribbon.querySelector(`.ribbon__inner`);
+    this.arrowLeft = this.ribbon.querySelector(`.ribbon__arrow_left`);
+    this.arrowRight = this.ribbon.querySelector(`.ribbon__arrow_right`);
+    this.ribbonElements = this.ribbon.querySelectorAll('.ribbon__item');
 
-    this.sub('item').classList.add('ribbon__item_active');
+
+    return this.ribbon;
   }
 
-  addEventListeners() {
-    this.sub('arrow_left').onclick = (event) => this.onArrowLeftClick(event);
-    this.sub('arrow_right').onclick = (event) => this.onArrowRightClick(event);
+  viewLinks(ribbon) {
+    return `<a href="#" class="ribbon__item" data-id="${ribbon.id}">${ribbon.name}</a>`;
+  }
 
-    this.elem.onclick = (event) => {
-      let itemElem = event.target.closest('.ribbon__item');
-      if (itemElem) {
-        this.onItemClick(itemElem);
-        event.preventDefault();
+  getSliderWidth() {
+    this.scrollLeft = this.ribbonInner.scrollLeft;
+
+    let scrollWidth = this.ribbonInner.scrollWidth;
+    let clientWidth = this.ribbonInner.clientWidth;
+
+    this.scrollRight = scrollWidth - this.scrollLeft - clientWidth;
+
+  }
+
+  initialListeners() {
+    this.elem.addEventListener('click', e => {
+      if (e.target.closest('.ribbon__arrow_right')) {
+        this.scrollToRight();
       }
-    };
 
-    this.sub('inner').onscroll = (event) => this.onScroll(event);
+      if (e.target.closest('.ribbon__arrow_left')) {
+        this.scrollToLeft();
+      }
+
+      if (e.target.closest('.ribbon__item')) {
+        this.onProductSelect(e);
+      }
+
+    });
+
+    this.ribbonInner.addEventListener('scroll', () => {
+      this.updateCarousel();
+    });
   }
 
-  onArrowRightClick(event) {
-    let offset = 350;
-    this.sub('inner').scrollBy(offset, 0);
-    this.updateArrows();
+  scrollToRight() {
+    this.ribbonInner.scrollBy(350, 0);
   }
 
-  onArrowLeftClick(event) {
-    let offset = 350;
-    this.sub('inner').scrollBy(-offset, 0);
-    this.updateArrows();
+  scrollToLeft() {
+    this.ribbonInner.scrollBy(-350, 0);
   }
 
-  onItemClick(itemElem) {
-    let oldActive = this.sub('item_active');
-    if (oldActive) {
-      oldActive.classList.remove('ribbon__item_active');
-    }
-
-    itemElem.classList.add('ribbon__item_active');
-
-    this.value = itemElem.dataset.id;
-
-    this.elem.dispatchEvent(
-      new CustomEvent('ribbon-select', {
-        detail: this.value,
-        bubbles: true,
-      })
-    );
-  }
-
-  onScroll(event) {
-    this.updateArrows();
-  }
-
-  sub(ref) {
-    return this.elem.querySelector(`.ribbon__${ref}`);
-  }
-
-  scrollRight() {
-    return this.sub('inner').scrollWidth - (this.sub('inner').scrollLeft + this.sub('inner').clientWidth);
-  }
-
-  scrollLeft() {
-    return this.sub('inner').scrollLeft;
-  }
-
-  updateArrows() {
-    if (this.scrollLeft() > 0) {
-      this.sub('arrow_left').classList.add('ribbon__arrow_visible');
+  updateCarousel() {
+    this.getSliderWidth();
+    if (this.scrollRight === 1) {
+      this.arrowRight.classList.remove('ribbon__arrow_visible');
     } else {
-      this.sub('arrow_left').classList.remove('ribbon__arrow_visible');
+      this.arrowRight.classList.add('ribbon__arrow_visible');
     }
 
-    let scrollRight = this.scrollRight();
-    scrollRight = scrollRight < 1 ? 0 : scrollRight; // Это нужно для ситуации, когда скролл произошел с погрешностью
-    if (scrollRight > 0) {
-      this.sub('arrow_right').classList.add('ribbon__arrow_visible');
+    if (this.scrollLeft < 1) {
+      this.arrowLeft.classList.remove('ribbon__arrow_visible');
     } else {
-      this.sub('arrow_right').classList.remove('ribbon__arrow_visible');
+      this.arrowLeft.classList.add('ribbon__arrow_visible');
     }
   }
 
+  setActiveLink(element) {
+    this.ribbonElements.forEach(el => {
+      el.classList.remove('ribbon__item_active');
+    });
+
+    element.classList.add('ribbon__item_active');
+  }
+
+  onProductSelect(event) {
+    event.preventDefault();
+    const element = event.target.closest('.ribbon__item');
+    this.setActiveLink(element);
+    const id = element.dataset.id;
+    const customEvent = new CustomEvent("ribbon-select", {
+      detail: id,
+      bubbles: true
+    });
+    this.ribbon.dispatchEvent(customEvent);
+  }
 }
